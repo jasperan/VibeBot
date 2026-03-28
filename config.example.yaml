@@ -22,3 +22,19 @@ llm:
 music:
   max_queue_size: 50
   default_volume: 0.5
+
+services:
+  asr:
+    command: "python vllm_plugin/scripts/start_server.py"
+    cwd: "/path/to/VibeVoice"
+    health_url: "http://localhost:8000/v1/models"
+    startup_timeout: 120
+  tts:
+    command: "python demo/vibevoice_realtime_demo.py --model_path microsoft/VibeVoice-Realtime-0.5B --device cuda --port 3000"
+    cwd: "/path/to/VibeVoice"
+    health_url: "ws://localhost:3000/stream"
+    startup_timeout: 120
+  llm:
+    command: "vllm serve Qwen/Qwen3.5-9B --port 8010"
+    health_url: "http://localhost:8010/v1/models"
+    startup_timeout: 120

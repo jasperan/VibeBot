@@ -81,6 +81,9 @@ class VoiceCog(commands.Cog):
         if music_cog:
             music_cog._clear_state()
         await vc.disconnect()
+        # Shutdown voice services to free GPU
+        if self.bot.services.is_running:
+            await self.bot.services.shutdown()
         await interaction.response.send_message("Left voice channel.", ephemeral=True)
 
     @app_commands.command(name="listen", description="Toggle voice conversation mode")
@@ -105,11 +108,25 @@ class VoiceCog(commands.Cog):
             self._pipeline.clear_context()
             await interaction.response.send_message("Stopped listening.", ephemeral=True)
         else:
+            # Lazy-start voice services if not running
+            if not self.bot.services.is_running:
+                await interaction.response.send_message(
+                    "Starting voice services... this may take a minute.", ephemeral=True
+                )
+                try:
+                    await self.bot.services.ensure_running()
+                except TimeoutError as e:
+                    await interaction.followup.send(f"Failed to start services: {e}")
+                    return
+                await interaction.followup.send(
+                    "Listening! Talk and I'll respond."
+                )
+            else:
+                await interaction.response.send_message(
+                    "Listening! Talk and I'll respond.", ephemeral=True
+                )
             self.is_listening = True
             self._listen_task = asyncio.create_task(self._listen_loop(vc))
-            await interaction.response.send_message(
-                "Listening! Talk and I'll respond.", ephemeral=True
-            )
 
     async def _listen_loop(self, voice_client: discord.VoiceClient):
         utterance_buffer = bytearray()

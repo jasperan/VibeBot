@@ -23,6 +23,9 @@ class VibeBotClient(commands.Bot):
         self.config = config
         self.mode_lock = asyncio.Lock()
 
+        from src.service_manager import ServiceManager
+        self.services = ServiceManager(config)
+
     async def setup_hook(self):
         await self._load_cogs()
         await self.tree.sync()
