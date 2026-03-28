@@ -1,0 +1,24 @@
+discord:
+  token: "YOUR_DISCORD_BOT_TOKEN"
+
+voice:
+  asr_url: "http://localhost:8000/v1"
+  tts_host: "localhost"
+  tts_port: 3000
+  tts_voice: "Carter"
+  tts_cfg: 1.5
+  tts_steps: 5
+  vad_aggressiveness: 2
+  silence_threshold_ms: 300
+  context_window: 5
+  max_utterance_seconds: 30
+
+llm:
+  base_url: "http://localhost:8010/v1"
+  model: "qwen3.5:9b"
+  max_tokens: 150
+  system_prompt: "You are VibeBot, a friendly voice assistant in a Discord voice channel. Keep responses concise and conversational, 1-2 sentences max."
+
+music:
+  max_queue_size: 50
+  default_volume: 0.5

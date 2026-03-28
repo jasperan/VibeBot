@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+config.yaml
+.agents/
+.claude/
+.crush/
+.openhands/
+.serena/
+.playwright-mcp/
+docs/plans/
+task_plan.md
+findings.md
+progress.md
+dogfood-output/
+content/
