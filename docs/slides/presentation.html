@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeBot - Discord Voice Conversation & Music Bot</title>
+
+    <!-- Fonts: Outfit from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===========================================
+           CSS CUSTOM PROPERTIES (SPLIT PASTEL THEME)
+           =========================================== */
+        :root {
+            /* Colors - Split Pastel preset */
+            --bg-peach: #f5e6dc;
+            --bg-lavender: #e4dff0;
+            --text-dark: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --badge-mint: #c8f0d8;
+            --badge-yellow: #f0f0c8;
+            --badge-pink: #f0d4e0;
+            --badge-blue: #c8daf0;
+            --badge-peach: #f0dcc8;
+            --badge-lilac: #d8c8f0;
+
+            /* Typography - MUST use clamp() */
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --title-size: clamp(2rem, 6vw, 5rem);
+            --subtitle-size: clamp(0.875rem, 2vw, 1.25rem);
+            --body-size: clamp(0.75rem, 1.2vw, 1rem);
+
+            /* Spacing - MUST use clamp() */
+            --slide-padding: clamp(1.5rem, 4vw, 4rem);
+            --content-gap: clamp(1rem, 2vw, 2rem);
+
+            /* Animation */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --duration-normal: 0.6s;
+        }
+
+        /* ===========================================
+           BASE STYLES
+           =========================================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-dark);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===========================================
+           VIEWPORT FITTING: MANDATORY BASE STYLES
+           Include this ENTIRE file in every presentation.
+           These styles ensure slides fit exactly in the viewport.
+           =========================================== */
+
+        /* 1. Lock html/body to viewport */
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        /* 2. Each slide = exact viewport height */
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile browsers */
+            overflow: hidden; /* CRITICAL: Prevent ANY overflow */
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* 3. Content container with flex for centering */
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-height: 100%;
+            overflow: hidden; /* Double-protection against overflow */
+            padding: var(--slide-padding);
+        }
+
+        /* 4. ALL typography uses clamp() for responsive scaling */
+        :root {
+            /* Titles scale from mobile to desktop */
+            --title-size: clamp(1.5rem, 5vw, 4rem);
+            --h2-size: clamp(1.25rem, 3.5vw, 2.5rem);
+            --h3-size: clamp(1rem, 2.5vw, 1.75rem);
+
+            /* Body text */
+            --body-size: clamp(0.75rem, 1.5vw, 1.125rem);
+            --small-size: clamp(0.65rem, 1vw, 0.875rem);
+
+            /* Spacing scales with viewport */
+            --slide-padding: clamp(1rem, 4vw, 4rem);
+            --content-gap: clamp(0.5rem, 2vw, 2rem);
+            --element-gap: clamp(0.25rem, 1vw, 1rem);
+        }
+
+        /* 5. Cards/containers use viewport-relative max sizes */
+        .card, .container, .content-box {
+            max-width: min(90vw, 1000px);
+            max-height: min(80vh, 700px);
+        }
+
+        /* 6. Lists auto-scale with viewport */
+        .feature-list, .bullet-list {
+            gap: clamp(0.4rem, 1vh, 1rem);
+        }
+
+        .feature-list li, .bullet-list li {
+            font-size: var(--body-size);
+            line-height: 1.4;
+        }
+
+        /* 7. Grids adapt to available space */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+            gap: clamp(0.5rem, 1.5vw, 1rem);
+        }
+
+        /* 8. Images constrained to viewport */
+        img, .image-container {
+            max-width: 100%;
+            max-height: min(50vh, 400px);
+            object-fit: contain;
+        }
+
+        /* ===========================================
+           RESPONSIVE BREAKPOINTS
+           Aggressive scaling for smaller viewports
+           =========================================== */
+
+        /* Short viewports (< 700px height) */
+        @media (max-height: 700px) {
+            :root {
+                --slide-padding: clamp(0.75rem, 3vw, 2rem);
+                --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+                --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+                --h2-size: clamp(1rem, 3vw, 1.75rem);
+            }
+        }
+
+        /* Very short viewports (< 600px height) */
+        @media (max-height: 600px) {
+            :root {
+                --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+                --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+                --title-size: clamp(1.1rem, 4vw, 2rem);
+                --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+            }
+
+            /* Hide non-essential elements */
+            .nav-dots, .keyboard-hint, .decorative {
+                display: none;
+            }
+        }
+
+        /* Extremely short (landscape phones, < 500px height) */
+        @media (max-height: 500px) {
+            :root {
+                --slide-padding: clamp(0.4rem, 2vw, 1rem);
+                --title-size: clamp(1rem, 3.5vw, 1.5rem);
+                --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+                --body-size: clamp(0.65rem, 1vw, 0.85rem);
+            }
+        }
+
+        /* Narrow viewports (< 600px width) */
+        @media (max-width: 600px) {
+            :root {
+                --title-size: clamp(1.25rem, 7vw, 2.5rem);
+            }
+
+            /* Stack grids vertically */
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===========================================
+           REDUCED MOTION
+           Respect user preferences
+           =========================================== */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.2s !important;
+            }
+
+            html {
+                scroll-behavior: auto;
+            }
+        }
+
+        /* ===========================================
+           SPLIT PASTEL LAYOUT
+           Two-color vertical split background
+           =========================================== */
+        .slide {
+            background: linear-gradient(90deg, var(--bg-peach) 50%, var(--bg-lavender) 50%);
+        }
+
+        .slide.peach-full {
+            background: var(--bg-peach);
+        }
+
+        .slide.lavender-full {
+            background: var(--bg-lavender);
+        }
+
+        .slide.split-reverse {
+            background: linear-gradient(90deg, var(--bg-lavender) 50%, var(--bg-peach) 50%);
+        }
+
+        /* Grid pattern overlay for right panel */
+        .slide::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+            background-size: clamp(20px, 3vw, 40px) clamp(20px, 3vw, 40px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .slide.peach-full::after,
+        .slide.lavender-full::after {
+            display: none;
+        }
+
+        .slide-content {
+            position: relative;
+            z-index: 1;
+            max-width: min(90vw, 1100px);
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* ===========================================
+           TYPOGRAPHY
+           =========================================== */
+        h1 {
+            font-family: var(--font-display);
+            font-size: var(--title-size);
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--text-dark);
+        }
+
+        h2 {
+            font-family: var(--font-display);
+            font-size: var(--h2-size);
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-dark);
+            margin-bottom: var(--content-gap);
+        }
+
+        h3 {
+            font-family: var(--font-display);
+            font-size: var(--h3-size);
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--text-dark);
+        }
+
+        p, li {
+            font-size: var(--body-size);
+            line-height: 1.6;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .subtitle {
+            font-size: clamp(0.9rem, 2vw, 1.3rem);
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* ===========================================
+           BADGE PILLS
+           Playful rounded pill elements
+           =========================================== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: clamp(0.3rem, 0.5vw, 0.5rem);
+            padding: clamp(0.3rem, 0.8vw, 0.5rem) clamp(0.6rem, 1.5vw, 1.2rem);
+            border-radius: 999px;
+            font-size: var(--small-size);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .badge-mint { background: var(--badge-mint); }
+        .badge-yellow { background: var(--badge-yellow); }
+        .badge-pink { background: var(--badge-pink); }
+        .badge-blue { background: var(--badge-blue); }
+        .badge-peach { background: var(--badge-peach); }
+        .badge-lilac { background: var(--badge-lilac); }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(0.3rem, 0.8vw, 0.6rem);
+            margin-top: var(--element-gap);
+        }
+
+        /* ===========================================
+           FEATURE CARDS
+           Rounded card elements
+           =========================================== */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+            gap: clamp(0.6rem, 1.5vw, 1.2rem);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: clamp(12px, 2vw, 20px);
+            padding: clamp(0.8rem, 2vw, 1.5rem);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .card h3 {
+            font-size: clamp(0.85rem, 1.8vw, 1.1rem);
+            margin-bottom: clamp(0.2rem, 0.5vw, 0.4rem);
+        }
+
+        .card p {
+            font-size: var(--small-size);
+        }
+
+        .card-icon {
+            font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+            margin-bottom: clamp(0.3rem, 0.8vw, 0.6rem);
+        }
+
+        /* ===========================================
+           CODE BLOCKS
+           =========================================== */
+        .code-block {
+            background: #1a1a2e;
+            color: #e8e8e8;
+            border-radius: clamp(8px, 1.5vw, 16px);
+            padding: clamp(0.8rem, 2vw, 1.5rem);
+            font-family: 'Courier New', monospace;
+            font-size: clamp(0.6rem, 1vw, 0.85rem);
+            line-height: 1.6;
+            overflow: hidden;
+        }
+
+        .code-block .comment { color: #6a9955; }
+        .code-block .keyword { color: #c586c0; }
+        .code-block .string { color: #ce9178; }
+        .code-block .function { color: #dcdcaa; }
+        .code-block .class-name { color: #4ec9b0; }
+        .code-block .param { color: #9cdcfe; }
+
+        /* ===========================================
+           FLOW DIAGRAM
+           =========================================== */
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(0.3rem, 1vw, 0.8rem);
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: clamp(10px, 1.5vw, 16px);
+            padding: clamp(0.5rem, 1.5vw, 1rem) clamp(0.8rem, 2vw, 1.5rem);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            min-width: clamp(60px, 10vw, 120px);
+        }
+
+        .flow-box h3 {
+            font-size: clamp(0.7rem, 1.3vw, 0.95rem);
+        }
+
+        .flow-box p {
+            font-size: clamp(0.55rem, 0.9vw, 0.75rem);
+        }
+
+        .flow-arrow {
+            font-size: clamp(0.8rem, 1.5vw, 1.2rem);
+            color: var(--text-secondary);
+        }
+
+        /* ===========================================
+           TWO COLUMN LAYOUT
+           =========================================== */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(1rem, 3vw, 2.5rem);
+            align-items: center;
+        }
+
+        @media (max-width: 700px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===========================================
+           COMMAND TABLE
+           =========================================== */
+        .cmd-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 clamp(2px, 0.3vw, 4px);
+        }
+
+        .cmd-table tr {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .cmd-table td {
+            padding: clamp(0.3rem, 0.8vw, 0.6rem) clamp(0.5rem, 1.2vw, 1rem);
+            font-size: var(--small-size);
+        }
+
+        .cmd-table td:first-child {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            border-radius: clamp(6px, 1vw, 10px) 0 0 clamp(6px, 1vw, 10px);
+            white-space: nowrap;
+        }
+
+        .cmd-table td:last-child {
+            border-radius: 0 clamp(6px, 1vw, 10px) clamp(6px, 1vw, 10px) 0;
+        }
+
+        /* ===========================================
+           PROGRESS BAR
+           =========================================== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--text-dark);
+            z-index: 1000;
+            transition: width 0.3s ease;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* ===========================================
+           NAVIGATION DOTS
+           =========================================== */
+        .nav-dots {
+            position: fixed;
+            right: clamp(8px, 1.5vw, 20px);
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(4px, 0.6vw, 8px);
+            z-index: 1000;
+        }
+
+        .nav-dot {
+            width: clamp(6px, 0.8vw, 10px);
+            height: clamp(6px, 0.8vw, 10px);
+            border-radius: 50%;
+            background: rgba(26, 26, 26, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            padding: 0;
+        }
+
+        .nav-dot.active {
+            background: var(--text-dark);
+            transform: scale(1.3);
+        }
+
+        /* ===========================================
+           SLIDE COUNTER
+           =========================================== */
+        .slide-counter {
+            position: fixed;
+            top: clamp(8px, 1.5vw, 16px);
+            right: clamp(8px, 1.5vw, 20px);
+            font-family: var(--font-body);
+            font-size: var(--small-size);
+            font-weight: 500;
+            color: var(--text-secondary);
+            z-index: 1000;
+        }
+
+        /* ===========================================
+           ANIMATIONS
+           Trigger via .visible class (added by JS on scroll)
+           =========================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-left {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal-left {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .reveal-scale {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal-scale {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Stagger children for sequential reveal */
+        .reveal:nth-child(1) { transition-delay: 0.1s; }
+        .reveal:nth-child(2) { transition-delay: 0.2s; }
+        .reveal:nth-child(3) { transition-delay: 0.3s; }
+        .reveal:nth-child(4) { transition-delay: 0.4s; }
+        .reveal:nth-child(5) { transition-delay: 0.5s; }
+        .reveal:nth-child(6) { transition-delay: 0.6s; }
+
+        .reveal-left:nth-child(1) { transition-delay: 0.1s; }
+        .reveal-left:nth-child(2) { transition-delay: 0.2s; }
+        .reveal-left:nth-child(3) { transition-delay: 0.3s; }
+
+        /* Bouncy floating animation (playful/friendly) */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(clamp(-5px, -1vh, -10px)); }
+        }
+
+        .float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .float-delay-1 { animation-delay: 0.5s; }
+        .float-delay-2 { animation-delay: 1s; }
+        .float-delay-3 { animation-delay: 1.5s; }
+
+        /* ===========================================
+           DECORATIVE ELEMENTS
+           =========================================== */
+        .circle-deco {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.15;
+            z-index: 0;
+        }
+
+        /* ===========================================
+           TITLE SLIDE SPECIFIC
+           =========================================== */
+        .title-slide .slide-content {
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .bot-icon {
+            font-size: clamp(3rem, 8vw, 5rem);
+            margin-bottom: var(--content-gap);
+        }
+
+        /* ===========================================
+           SECTION HEADING SLIDE
+           =========================================== */
+        .section-heading .slide-content {
+            align-items: flex-start;
+        }
+
+        .section-number {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 800;
+            opacity: 0.1;
+            line-height: 1;
+        }
+
+        /* ===========================================
+           BULLET LIST STYLED
+           =========================================== */
+        .bullet-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(0.3rem, 0.8vh, 0.8rem);
+        }
+
+        .bullet-list li {
+            padding-left: clamp(1rem, 2vw, 1.5rem);
+            position: relative;
+        }
+
+        .bullet-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: clamp(0.4rem, 0.8vw, 0.55rem);
+            width: clamp(5px, 0.6vw, 8px);
+            height: clamp(5px, 0.6vw, 8px);
+            border-radius: 50%;
+            background: var(--text-dark);
+        }
+
+        /* Alternate bullet colors */
+        .bullet-list li:nth-child(odd)::before { background: var(--badge-mint); border: 2px solid var(--text-dark); }
+        .bullet-list li:nth-child(even)::before { background: var(--badge-pink); border: 2px solid var(--text-dark); }
+
+        /* ===========================================
+           STAT BLOCKS
+           =========================================== */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+            gap: clamp(0.5rem, 1.5vw, 1rem);
+        }
+
+        .stat-block {
+            text-align: center;
+            padding: clamp(0.6rem, 1.5vw, 1.2rem);
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: clamp(10px, 1.5vw, 16px);
+        }
+
+        .stat-number {
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            font-weight: 800;
+            line-height: 1;
+            color: var(--text-dark);
+        }
+
+        .stat-label {
+            font-size: var(--small-size);
+            color: var(--text-secondary);
+            margin-top: clamp(0.2rem, 0.5vw, 0.4rem);
+        }
+
+        /* Closing slide CTA */
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--text-dark);
+            color: #fff;
+            padding: clamp(0.6rem, 1.5vw, 1rem) clamp(1.2rem, 3vw, 2rem);
+            border-radius: 999px;
+            font-family: var(--font-body);
+            font-size: var(--body-size);
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(26, 26, 26, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress bar -->
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Navigation dots -->
+    <nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+    <!-- Slide counter -->
+    <div class="slide-counter" id="slideCounter">1 / 22</div>
+
+    <!-- ===========================================
+         SLIDE 1: TITLE
+         =========================================== -->
+    <section class="slide title-slide" aria-label="Title">
+        <div class="slide-content">
+            <div class="bot-icon reveal float">🤖</div>
+            <h1 class="reveal">VibeBot</h1>
+            <p class="subtitle reveal">Discord voice conversation + music bot</p>
+            <div class="badge-row reveal">
+                <span class="badge badge-mint">Voice AI</span>
+                <span class="badge badge-pink">Music</span>
+                <span class="badge badge-yellow">Discord</span>
+                <span class="badge badge-lilac">Python</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 2: THE PROBLEM
+         =========================================== -->
+    <section class="slide" aria-label="The Problem">
+        <div class="slide-content">
+            <h2 class="reveal">Why VibeBot?</h2>
+            <p class="subtitle reveal" style="margin-bottom: var(--content-gap);">Discord voice channels are for hanging out. But bots can't hold a conversation.</p>
+            <ul class="bullet-list reveal">
+                <li>Text-only bots force you to type while talking</li>
+                <li>Music bots play audio but can't interact</li>
+                <li>Voice assistants exist, but not inside Discord</li>
+                <li>No single bot does both: talk and play music</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 3: WHAT IT DOES
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="What it does">
+        <div class="slide-content">
+            <h2 class="reveal">Two Modes, One Bot</h2>
+            <div class="two-col">
+                <div class="card reveal-left">
+                    <div class="card-icon">🎙️</div>
+                    <h3>Voice Mode</h3>
+                    <p>Talk in a voice channel and the bot responds conversationally. Real-time speech-to-text, LLM generation, text-to-speech.</p>
+                    <div class="badge-row">
+                        <span class="badge badge-mint">/listen</span>
+                    </div>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🎵</div>
+                    <h3>Music Mode</h3>
+                    <p>Play YouTube audio with standard queue controls. Search by name or paste a URL.</p>
+                    <div class="badge-row">
+                        <span class="badge badge-pink">/play</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 4: KEY FEATURES
+         =========================================== -->
+    <section class="slide" aria-label="Key Features">
+        <div class="slide-content">
+            <h2 class="reveal">Key Features</h2>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <div class="card-icon">🗣️</div>
+                    <h3>Real-time ASR</h3>
+                    <p>VibeVoice transcribes speech as you talk. No waiting.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🧠</div>
+                    <h3>LLM Responses</h3>
+                    <p>Qwen3.5:9B generates conversational replies with context memory.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🔊</div>
+                    <h3>Streaming TTS</h3>
+                    <p>VibeVoice Realtime speaks responses back through WebSocket streaming.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🎶</div>
+                    <h3>YouTube Music</h3>
+                    <p>Full queue system: play, skip, pause, resume, now-playing.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">⚡</div>
+                    <h3>Lazy Services</h3>
+                    <p>GPU services start on demand and shut down when idle.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🔒</div>
+                    <h3>Mode Locking</h3>
+                    <p>Voice and music are mutually exclusive. Clean state transitions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 5: ARCHITECTURE OVERVIEW
+         =========================================== -->
+    <section class="slide lavender-full" aria-label="Architecture Overview">
+        <div class="slide-content">
+            <span class="section-number reveal">01</span>
+            <h2 class="reveal">Architecture</h2>
+            <p class="subtitle reveal">Four components, three external services, one pipeline.</p>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 6: VOICE PIPELINE FLOW
+         =========================================== -->
+    <section class="slide" aria-label="Voice Pipeline">
+        <div class="slide-content">
+            <h2 class="reveal">Voice Pipeline</h2>
+            <div class="flow-row reveal">
+                <div class="flow-box">
+                    <h3>🎙️ Discord</h3>
+                    <p>48kHz stereo PCM</p>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">
+                    <h3>AudioSink</h3>
+                    <p>Downsample to 16kHz mono</p>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">
+                    <h3>VAD</h3>
+                    <p>Detect speech end</p>
+                </div>
+            </div>
+            <div class="flow-row reveal" style="margin-top: var(--element-gap);">
+                <div class="flow-box">
+                    <h3>ASR</h3>
+                    <p>VibeVoice transcribe</p>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">
+                    <h3>LLM</h3>
+                    <p>Qwen3.5:9B generate</p>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">
+                    <h3>TTS</h3>
+                    <p>VibeVoice stream</p>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">
+                    <h3>🔊 Discord</h3>
+                    <p>48kHz stereo out</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 7: AUDIO PROCESSING
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="Audio Processing">
+        <div class="slide-content">
+            <h2 class="reveal">Audio Processing</h2>
+            <div class="two-col">
+                <div>
+                    <ul class="bullet-list reveal">
+                        <li><strong>Input:</strong> Discord sends 48kHz stereo PCM</li>
+                        <li><strong>Downmix:</strong> Stereo to mono averaging</li>
+                        <li><strong>Resample:</strong> 48kHz to 16kHz for ASR</li>
+                        <li><strong>Output:</strong> TTS at 24kHz, upsampled to 48kHz stereo</li>
+                    </ul>
+                </div>
+                <div class="code-block reveal">
+                    <span class="keyword">def</span> <span class="function">resample_pcm</span>(<span class="param">pcm_data</span>, <span class="param">from_rate</span>, <span class="param">to_rate</span>):<br>
+                    &nbsp;&nbsp;samples = np.frombuffer(pcm_data, np.int16)<br>
+                    &nbsp;&nbsp;ratio = to_rate / from_rate<br>
+                    &nbsp;&nbsp;new_length = int(len(samples) * ratio)<br>
+                    &nbsp;&nbsp;indices = np.linspace(0, len(samples)-1,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;new_length).astype(int)<br>
+                    &nbsp;&nbsp;<span class="keyword">return</span> samples[indices].tobytes()
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 8: VAD (VOICE ACTIVITY DETECTION)
+         =========================================== -->
+    <section class="slide" aria-label="Voice Activity Detection">
+        <div class="slide-content">
+            <h2 class="reveal">Voice Activity Detection</h2>
+            <p class="subtitle reveal" style="margin-bottom: var(--content-gap);">WebRTC VAD segments speech from silence in real-time.</p>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <h3>30ms Frames</h3>
+                    <p>Audio is chunked into 30ms frames (960 bytes at 16kHz). Each frame gets a speech/silence verdict.</p>
+                </div>
+                <div class="card reveal">
+                    <h3>Silence Threshold</h3>
+                    <p>Configurable silence duration triggers end-of-utterance. Prevents cutting off mid-sentence.</p>
+                </div>
+                <div class="card reveal">
+                    <h3>Max Utterance Cap</h3>
+                    <p>Long monologues get chunked at a configurable max length. Keeps the pipeline responsive.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 9: ASR CLIENT
+         =========================================== -->
+    <section class="slide peach-full" aria-label="ASR Deep Dive">
+        <div class="slide-content">
+            <span class="section-number reveal">02</span>
+            <h2 class="reveal">Core Components</h2>
+            <p class="subtitle reveal">ASR, LLM, TTS, and the pipeline that ties them together.</p>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 10: ASR CLIENT DETAIL
+         =========================================== -->
+    <section class="slide" aria-label="ASR Client">
+        <div class="slide-content">
+            <h2 class="reveal">ASR Client</h2>
+            <div class="two-col">
+                <div>
+                    <p class="reveal" style="margin-bottom: var(--element-gap);">Converts speech to text using Microsoft VibeVoice, served through vLLM.</p>
+                    <ul class="bullet-list reveal">
+                        <li>PCM audio wrapped in WAV format</li>
+                        <li>Base64-encoded as a data URL</li>
+                        <li>Sent via OpenAI-compatible chat API</li>
+                        <li>Handles both JSON and plain text responses</li>
+                    </ul>
+                </div>
+                <div class="code-block reveal">
+                    <span class="comment"># Audio sent as multimodal message</span><br>
+                    {<br>
+                    &nbsp;&nbsp;<span class="string">"model"</span>: <span class="string">"VibeVoice-ASR"</span>,<br>
+                    &nbsp;&nbsp;<span class="string">"messages"</span>: [{<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"role"</span>: <span class="string">"user"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"content"</span>: [<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="string">"type"</span>: <span class="string">"audio_url"</span>, ...},<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="string">"type"</span>: <span class="string">"text"</span>, ...}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;]<br>
+                    &nbsp;&nbsp;}]<br>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 11: LLM CLIENT
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="LLM Client">
+        <div class="slide-content">
+            <h2 class="reveal">LLM Client</h2>
+            <div class="two-col">
+                <div class="code-block reveal">
+                    <span class="keyword">class</span> <span class="class-name">LLMClient</span>:<br>
+                    &nbsp;&nbsp;<span class="keyword">async def</span> <span class="function">generate</span>(self, text, ctx):<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;messages = [<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="string">"role"</span>: <span class="string">"system"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"content"</span>: self.system_prompt}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;]<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;messages.extend(ctx)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;messages.append(<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="string">"role"</span>: <span class="string">"user"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"content"</span>: text})<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> resp[<span class="string">"choices"</span>][0]...
+                </div>
+                <div>
+                    <p class="reveal" style="margin-bottom: var(--element-gap);">Qwen3.5:9B served by vLLM on port 8010.</p>
+                    <ul class="bullet-list reveal">
+                        <li>System prompt sets the bot's personality</li>
+                        <li>Sliding context window (configurable depth)</li>
+                        <li>Thinking mode disabled for clean output</li>
+                        <li>30-second timeout per request</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 12: TTS CLIENT
+         =========================================== -->
+    <section class="slide" aria-label="TTS Client">
+        <div class="slide-content">
+            <h2 class="reveal">TTS Client</h2>
+            <div class="two-col">
+                <div>
+                    <p class="reveal" style="margin-bottom: var(--element-gap);">VibeVoice Realtime streams audio chunks over WebSocket. No waiting for the full synthesis.</p>
+                    <ul class="bullet-list reveal">
+                        <li>WebSocket connection per synthesis call</li>
+                        <li>24kHz PCM audio chunks streamed back</li>
+                        <li>Configurable voice, CFG scale, and diffusion steps</li>
+                        <li>Default voice: "Carter"</li>
+                    </ul>
+                </div>
+                <div class="card reveal" style="text-align: center;">
+                    <div class="card-icon">🔊</div>
+                    <h3>Streaming Path</h3>
+                    <div class="flow-row" style="margin-top: var(--element-gap);">
+                        <span class="badge badge-lilac">Text</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="badge badge-mint">WebSocket</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="badge badge-pink">PCM chunks</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 13: VOICE PIPELINE CLASS
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="Voice Pipeline Class">
+        <div class="slide-content">
+            <h2 class="reveal">VoicePipeline</h2>
+            <p class="subtitle reveal" style="margin-bottom: var(--content-gap);">The glue. Takes raw audio in, yields synthesized audio out.</p>
+            <div class="code-block reveal">
+                <span class="keyword">class</span> <span class="class-name">VoicePipeline</span>:<br>
+                &nbsp;&nbsp;<span class="keyword">async def</span> <span class="function">process_utterance</span>(self, pcm_16k_mono):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;transcript = <span class="keyword">await</span> self.asr.transcribe(pcm_16k_mono)<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;response = <span class="keyword">await</span> self.llm.generate(transcript, self._context)<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;self._context.append({<span class="string">"role"</span>: <span class="string">"user"</span>, ...})<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;self._context.append({<span class="string">"role"</span>: <span class="string">"assistant"</span>, ...})<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">async for</span> chunk <span class="keyword">in</span> self.tts.synthesize(response):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pcm_48k = resample_pcm(chunk, 24000, 48000)<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">yield</span> mono_to_stereo(pcm_48k)
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 14: MUSIC COG
+         =========================================== -->
+    <section class="slide" aria-label="Music System">
+        <div class="slide-content">
+            <h2 class="reveal">Music System</h2>
+            <div class="two-col">
+                <div>
+                    <p class="reveal" style="margin-bottom: var(--element-gap);">YouTube search and playback powered by yt-dlp and FFmpeg.</p>
+                    <ul class="bullet-list reveal">
+                        <li>yt-dlp extracts best audio stream URL</li>
+                        <li>FFmpeg decodes and streams to Discord</li>
+                        <li>Volume control via PCMVolumeTransformer</li>
+                        <li>Auto-advances queue when tracks end</li>
+                    </ul>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">📋</div>
+                    <h3>Queue System</h3>
+                    <p style="margin-bottom: var(--element-gap);">Bounded deque with configurable max size. Tracks carry title, URL, duration, and requester info.</p>
+                    <div class="badge-row">
+                        <span class="badge badge-yellow">deque</span>
+                        <span class="badge badge-blue">auto-play</span>
+                        <span class="badge badge-mint">bounded</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 15: TECH STACK
+         =========================================== -->
+    <section class="slide lavender-full" aria-label="Tech Stack Section">
+        <div class="slide-content">
+            <span class="section-number reveal">03</span>
+            <h2 class="reveal">Tech Stack</h2>
+            <p class="subtitle reveal">What powers everything under the hood.</p>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 16: TECH STACK DETAIL
+         =========================================== -->
+    <section class="slide" aria-label="Tech Stack Detail">
+        <div class="slide-content">
+            <h2 class="reveal">Under the Hood</h2>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <div class="card-icon">🐍</div>
+                    <h3>Python 3.12</h3>
+                    <p>Async-first with discord.py commands framework</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🎤</div>
+                    <h3>VibeVoice ASR</h3>
+                    <p>Microsoft speech-to-text model, vLLM-served</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🤖</div>
+                    <h3>Qwen3.5:9B</h3>
+                    <p>Alibaba LLM for response generation, vLLM-served</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🔈</div>
+                    <h3>VibeVoice TTS</h3>
+                    <p>0.5B realtime model, WebSocket streaming</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">📡</div>
+                    <h3>WebRTC VAD</h3>
+                    <p>Google's voice activity detector for speech segmentation</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🎬</div>
+                    <h3>FFmpeg + yt-dlp</h3>
+                    <p>YouTube audio extraction and codec handling</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 17: SERVICE MANAGER
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="Service Manager">
+        <div class="slide-content">
+            <h2 class="reveal">Service Manager</h2>
+            <p class="subtitle reveal" style="margin-bottom: var(--content-gap);">GPU services are expensive. VibeBot starts them only when needed.</p>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <h3>Lazy Start</h3>
+                    <p>Services launch on first /listen command. No GPU burn at idle.</p>
+                </div>
+                <div class="card reveal">
+                    <h3>Health Checks</h3>
+                    <p>HTTP and WebSocket health probes. Bot waits until all services are ready.</p>
+                </div>
+                <div class="card reveal">
+                    <h3>Clean Shutdown</h3>
+                    <p>SIGTERM with 10s grace period, then SIGKILL. Frees GPU on /leave.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 18: COMMANDS
+         =========================================== -->
+    <section class="slide peach-full" aria-label="Commands Section">
+        <div class="slide-content">
+            <span class="section-number reveal">04</span>
+            <h2 class="reveal">Commands</h2>
+            <p class="subtitle reveal">Slash commands for everything.</p>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 19: COMMAND TABLE
+         =========================================== -->
+    <section class="slide" aria-label="Commands List">
+        <div class="slide-content">
+            <h2 class="reveal">Slash Commands</h2>
+            <table class="cmd-table reveal">
+                <tr><td>/join</td><td>Join your voice channel</td></tr>
+                <tr><td>/leave</td><td>Leave and clear all state</td></tr>
+                <tr><td>/listen</td><td>Toggle voice conversation mode</td></tr>
+                <tr><td>/play</td><td>Play a song from YouTube</td></tr>
+                <tr><td>/skip</td><td>Skip the current song</td></tr>
+                <tr><td>/queue</td><td>Show the music queue</td></tr>
+                <tr><td>/pause</td><td>Pause playback</td></tr>
+                <tr><td>/resume</td><td>Resume playback</td></tr>
+                <tr><td>/stop</td><td>Stop music, clear queue</td></tr>
+                <tr><td>/np</td><td>Show now playing</td></tr>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 20: SETUP & REQUIREMENTS
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="Setup">
+        <div class="slide-content">
+            <h2 class="reveal">Getting Started</h2>
+            <div class="two-col">
+                <div>
+                    <h3 class="reveal" style="margin-bottom: var(--element-gap);">Requirements</h3>
+                    <ul class="bullet-list reveal">
+                        <li>Python 3.12+</li>
+                        <li>FFmpeg installed</li>
+                        <li>NVIDIA GPU (for VibeVoice models)</li>
+                        <li>Discord bot token</li>
+                    </ul>
+                </div>
+                <div class="code-block reveal">
+                    <span class="comment"># Clone & install</span><br>
+                    git clone https://github.com/...<br>
+                    <span class="keyword">cd</span> VibeBot<br>
+                    bash install.sh<br>
+                    <br>
+                    <span class="comment"># Configure</span><br>
+                    vim config.yaml<br>
+                    <br>
+                    <span class="comment"># Run</span><br>
+                    conda activate vibebot<br>
+                    python -m src.bot
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 21: EXTERNAL SERVICES SETUP
+         =========================================== -->
+    <section class="slide" aria-label="Services Setup">
+        <div class="slide-content">
+            <h2 class="reveal">External Services</h2>
+            <p class="subtitle reveal" style="margin-bottom: var(--content-gap);">Three processes run alongside the bot. Each gets its own terminal.</p>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <div class="card-icon">🎤</div>
+                    <h3>ASR Server (port 8000)</h3>
+                    <p>vLLM serving VibeVoice-ASR. Start with the included script.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🔊</div>
+                    <h3>TTS Server (port 3000)</h3>
+                    <p>VibeVoice Realtime 0.5B. WebSocket streaming on CUDA.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🧠</div>
+                    <h3>LLM Server (port 8010)</h3>
+                    <p>vLLM serving Qwen3.5:9B for response generation.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 22: PROJECT STRUCTURE
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="Project Structure">
+        <div class="slide-content">
+            <h2 class="reveal">Project Structure</h2>
+            <div class="two-col">
+                <div class="code-block reveal">
+                    VibeBot/<br>
+                    ├── src/<br>
+                    │&nbsp;&nbsp;├── bot.py&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Entry point</span><br>
+                    │&nbsp;&nbsp;├── voice_pipeline.py&nbsp;<span class="comment"># ASR→LLM→TTS</span><br>
+                    │&nbsp;&nbsp;├── asr_client.py&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Speech-to-text</span><br>
+                    │&nbsp;&nbsp;├── llm_client.py&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># LLM calls</span><br>
+                    │&nbsp;&nbsp;├── tts_client.py&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Text-to-speech</span><br>
+                    │&nbsp;&nbsp;├── audio.py&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># PCM utilities</span><br>
+                    │&nbsp;&nbsp;├── service_manager.py<span class="comment"># Subprocess mgr</span><br>
+                    │&nbsp;&nbsp;└── cogs/<br>
+                    │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── voice.py&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># /listen, /join</span><br>
+                    │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── music.py&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># /play, /queue</span><br>
+                    ├── tests/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Full test suite</span><br>
+                    ├── install.sh&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Setup script</span><br>
+                    └── config.yaml&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Bot config</span>
+                </div>
+                <div>
+                    <p class="reveal" style="margin-bottom: var(--content-gap);">Clean separation: each external service gets its own async client. The pipeline composes them. Cogs handle Discord commands.</p>
+                    <div class="stat-grid reveal">
+                        <div class="stat-block">
+                            <div class="stat-number">10</div>
+                            <div class="stat-label">Source files</div>
+                        </div>
+                        <div class="stat-block">
+                            <div class="stat-number">2</div>
+                            <div class="stat-label">Cogs</div>
+                        </div>
+                        <div class="stat-block">
+                            <div class="stat-number">3</div>
+                            <div class="stat-label">AI services</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 23: DESIGN DECISIONS
+         =========================================== -->
+    <section class="slide" aria-label="Design Decisions">
+        <div class="slide-content">
+            <h2 class="reveal">Design Decisions</h2>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <h3>Async Everything</h3>
+                    <p>httpx.AsyncClient and websockets keep the event loop free. No blocking calls.</p>
+                </div>
+                <div class="card reveal">
+                    <h3>Sliding Context</h3>
+                    <p>Conversation context window keeps the last N turns. Old messages get evicted to control token usage.</p>
+                </div>
+                <div class="card reveal">
+                    <h3>PCMStreamSource</h3>
+                    <p>Custom Discord AudioSource that buffers TTS chunks and serves 20ms frames on demand.</p>
+                </div>
+                <div class="card reveal">
+                    <h3>Mode Mutex</h3>
+                    <p>Voice and music can't run simultaneously. Cogs check each other's state before starting.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 24: TESTING
+         =========================================== -->
+    <section class="slide split-reverse" aria-label="Testing">
+        <div class="slide-content">
+            <h2 class="reveal">Testing</h2>
+            <div class="two-col">
+                <div>
+                    <p class="reveal" style="margin-bottom: var(--element-gap);">Full test suite covering every component, from audio utilities to cog interactions.</p>
+                    <ul class="bullet-list reveal">
+                        <li>Unit tests for each client (ASR, LLM, TTS)</li>
+                        <li>Audio resampling and channel conversion tests</li>
+                        <li>Voice pipeline integration tests</li>
+                        <li>Cog command behavior tests</li>
+                        <li>Service manager lifecycle tests</li>
+                    </ul>
+                </div>
+                <div class="code-block reveal">
+                    <span class="comment"># Run the full suite</span><br>
+                    pytest tests/ -v<br>
+                    <br>
+                    <span class="comment"># Test files:</span><br>
+                    test_audio.py<br>
+                    test_asr_client.py<br>
+                    test_llm_client.py<br>
+                    test_tts_client.py<br>
+                    test_voice_pipeline.py<br>
+                    test_voice_cog.py<br>
+                    test_music_cog.py<br>
+                    test_service_manager.py<br>
+                    test_integration.py
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 25: CLOSING
+         =========================================== -->
+    <section class="slide title-slide" aria-label="Closing">
+        <div class="slide-content">
+            <div class="bot-icon reveal float">🤖</div>
+            <h1 class="reveal" style="font-size: clamp(2rem, 6vw, 4.5rem);">VibeBot</h1>
+            <p class="subtitle reveal">Talk to it. Play music through it. All inside Discord.</p>
+            <div class="badge-row reveal" style="margin-top: var(--content-gap);">
+                <span class="badge badge-mint">Python 3.12</span>
+                <span class="badge badge-pink">VibeVoice</span>
+                <span class="badge badge-yellow">Qwen3.5:9B</span>
+                <span class="badge badge-blue">discord.py</span>
+                <span class="badge badge-lilac">vLLM</span>
+            </div>
+            <a href="https://github.com/jasperan/VibeBot" class="cta-button reveal" style="margin-top: var(--content-gap);">
+                View on GitHub →
+            </a>
+        </div>
+    </section>
+
+    <!-- ===========================================
+       SLIDE PRESENTATION CONTROLLER
+       =========================================== -->
+    <script>
+        class SlidePresentation {
+            constructor() {
+                this.slides = document.querySelectorAll('.slide');
+                this.currentSlide = 0;
+                this.isScrolling = false;
+                this.setupIntersectionObserver();
+                this.setupKeyboardNav();
+                this.setupTouchNav();
+                this.setupProgressBar();
+                this.setupNavDots();
+                this.setupScrollListener();
+            }
+
+            /* --- Intersection Observer: add .visible on scroll --- */
+            setupIntersectionObserver() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            const index = Array.from(this.slides).indexOf(entry.target);
+                            if (index !== -1) {
+                                this.currentSlide = index;
+                                this.updateProgressBar();
+                                this.updateNavDots();
+                                this.updateCounter();
+                            }
+                        }
+                    });
+                }, {
+                    threshold: 0.5
+                });
+
+                this.slides.forEach(slide => observer.observe(slide));
+            }
+
+            /* --- Keyboard navigation --- */
+            setupKeyboardNav() {
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'ArrowDown':
+                        case 'ArrowRight':
+                        case ' ':
+                        case 'PageDown':
+                            e.preventDefault();
+                            this.goToSlide(this.currentSlide + 1);
+                            break;
+                        case 'ArrowUp':
+                        case 'ArrowLeft':
+                        case 'PageUp':
+                            e.preventDefault();
+                            this.goToSlide(this.currentSlide - 1);
+                            break;
+                        case 'Home':
+                            e.preventDefault();
+                            this.goToSlide(0);
+                            break;
+                        case 'End':
+                            e.preventDefault();
+                            this.goToSlide(this.slides.length - 1);
+                            break;
+                    }
+                });
+            }
+
+            /* --- Touch / swipe support --- */
+            setupTouchNav() {
+                let touchStartY = 0;
+                let touchStartX = 0;
+
+                document.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+
+                document.addEventListener('touchend', (e) => {
+                    const deltaY = touchStartY - e.changedTouches[0].clientY;
+                    const deltaX = touchStartX - e.changedTouches[0].clientX;
+
+                    // Only respond to vertical swipes
+                    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 50) {
+                        if (deltaY > 0) {
+                            this.goToSlide(this.currentSlide + 1);
+                        } else {
+                            this.goToSlide(this.currentSlide - 1);
+                        }
+                    }
+                }, { passive: true });
+            }
+
+            /* --- Progress bar --- */
+            setupProgressBar() {
+                this.progressBar = document.getElementById('progressBar');
+                this.updateProgressBar();
+            }
+
+            updateProgressBar() {
+                if (!this.progressBar) return;
+                const progress = ((this.currentSlide + 1) / this.slides.length) * 100;
+                this.progressBar.style.width = progress + '%';
+            }
+
+            /* --- Navigation dots --- */
+            setupNavDots() {
+                const nav = document.getElementById('navDots');
+                if (!nav) return;
+
+                this.slides.forEach((_, i) => {
+                    const dot = document.createElement('button');
+                    dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+                    dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+                    dot.addEventListener('click', () => this.goToSlide(i));
+                    nav.appendChild(dot);
+                });
+
+                this.navDotElements = nav.querySelectorAll('.nav-dot');
+            }
+
+            updateNavDots() {
+                if (!this.navDotElements) return;
+                this.navDotElements.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === this.currentSlide);
+                });
+            }
+
+            /* --- Slide counter --- */
+            updateCounter() {
+                const counter = document.getElementById('slideCounter');
+                if (counter) {
+                    counter.textContent = `${this.currentSlide + 1} / ${this.slides.length}`;
+                }
+            }
+
+            /* --- Scroll listener for progress updates --- */
+            setupScrollListener() {
+                document.addEventListener('scroll', () => {
+                    this.updateProgressBar();
+                }, { passive: true });
+            }
+
+            /* --- Navigate to a specific slide --- */
+            goToSlide(index) {
+                if (index < 0 || index >= this.slides.length) return;
+                this.currentSlide = index;
+                this.slides[index].scrollIntoView({ behavior: 'smooth' });
+                this.updateProgressBar();
+                this.updateNavDots();
+                this.updateCounter();
+            }
+        }
+
+        /* Initialize on DOM ready */
+        document.addEventListener('DOMContentLoaded', () => {
+            new SlidePresentation();
+        });
+    </script>
+</body>
+</html>

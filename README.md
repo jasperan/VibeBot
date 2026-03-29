@@ -1,5 +1,26 @@
 # VibeBot
 
+<div align="center">
+
+**[View Interactive Presentation](docs/slides/presentation.html)** | Animated overview of the project
+
+</div>
+
+<table>
+<tr>
+<td><img src="docs/slides/slide-01.png" alt="Title" width="400"/></td>
+<td><img src="docs/slides/slide-02.png" alt="Overview" width="400"/></td>
+</tr>
+<tr>
+<td><img src="docs/slides/slide-03.png" alt="Architecture" width="400"/></td>
+<td><img src="docs/slides/slide-04.png" alt="Features" width="400"/></td>
+</tr>
+<tr>
+<td><img src="docs/slides/slide-05.png" alt="Tech Stack" width="400"/></td>
+<td><img src="docs/slides/slide-06.png" alt="Getting Started" width="400"/></td>
+</tr>
+</table>
+
 Discord voice conversation + music bot. Uses Microsoft VibeVoice for real-time
 speech-to-text and text-to-speech, with Qwen3.5:9B for generating responses.
 
