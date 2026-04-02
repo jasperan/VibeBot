@@ -18,6 +18,7 @@ llm:
   model: "qwen3.5:9b"
   max_tokens: 150
   system_prompt: "You are VibeBot, a friendly voice assistant in a Discord voice channel. Keep responses concise and conversational, 1-2 sentences max."
+  backend: "openai"  # "openai" for vLLM/LiteLLM, "ollama" for Ollama (disables thinking for low latency)
 
 music:
   max_queue_size: 50

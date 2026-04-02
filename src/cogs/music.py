@@ -29,6 +29,44 @@ class MusicCog(commands.Cog):
         self.is_playing = False
         self.now_playing = None
 
+    def set_volume(self, level: float):
+        """Set volume level (0.0 to 1.0). Applies immediately if playing."""
+        self._volume = max(0.0, min(1.0, level))
+
+    async def voice_play(self, guild: discord.Guild, query: str):
+        """Play a track triggered by voice command (no interaction needed)."""
+        vc = guild.voice_client
+        if not vc:
+            return
+        track = await self._search_youtube(query)
+        if not track:
+            log.info("Voice play: couldn't find track for '%s'", query)
+            return
+        track["requester"] = "VibeBot (voice)"
+        if vc.is_playing():
+            self.queue.append(track)
+            log.info("Voice play: queued '%s'", track["title"])
+        else:
+            self.is_playing = True
+            self.now_playing = track
+            source = discord.FFmpegPCMAudio(track["url"], **FFMPEG_OPTIONS)
+            source = discord.PCMVolumeTransformer(source, volume=self._volume)
+            vc.play(source, after=lambda e: self._play_next(guild, e))
+            log.info("Voice play: now playing '%s'", track["title"])
+
+    async def voice_skip(self, guild: discord.Guild):
+        """Skip triggered by voice command."""
+        vc = guild.voice_client
+        if vc and vc.is_playing():
+            vc.stop()
+
+    async def voice_stop(self, guild: discord.Guild):
+        """Stop triggered by voice command."""
+        vc = guild.voice_client
+        if vc and (vc.is_playing() or vc.is_paused()):
+            vc.stop()
+        self._clear_state()
+
     def _check_listening(self) -> bool:
         voice_cog = self.bot.get_cog("VoiceCog")
         return voice_cog is not None and voice_cog.is_listening
@@ -171,4 +209,20 @@ class MusicCog(commands.Cog):
             f"**{track['title']}** [{mins}:{secs:02d}] "
             f"(requested by {track.get('requester', 'unknown')})",
             ephemeral=True,
+        )
+
+    @app_commands.command(name="volume", description="Set music volume (0-100)")
+    @app_commands.describe(level="Volume level 0-100")
+    async def volume(self, interaction: discord.Interaction, level: int):
+        if level < 0 or level > 100:
+            await interaction.response.send_message(
+                "Volume must be between 0 and 100.", ephemeral=True
+            )
+            return
+        self._volume = level / 100.0
+        vc = interaction.guild.voice_client
+        if vc and vc.source and isinstance(vc.source, discord.PCMVolumeTransformer):
+            vc.source.volume = self._volume
+        await interaction.response.send_message(
+            f"Volume set to {level}%", ephemeral=True
         )

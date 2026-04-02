@@ -34,9 +34,11 @@ class VibeBotClient(commands.Bot):
     async def _load_cogs(self):
         from src.cogs.voice import VoiceCog
         from src.cogs.music import MusicCog
+        from src.cogs.admin import AdminCog
         await self.add_cog(VoiceCog(self))
         await self.add_cog(MusicCog(self))
-        log.info("Cogs loaded: VoiceCog, MusicCog")
+        await self.add_cog(AdminCog(self))
+        log.info("Cogs loaded: VoiceCog, MusicCog, AdminCog")
 
     async def on_ready(self):
         log.info(f"VibeBot online as {self.user} (id={self.user.id})")
