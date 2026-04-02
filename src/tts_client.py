@@ -36,3 +36,6 @@ class TTSClient:
                         yield message
         except Exception as e:
             log.warning("TTS WebSocket error: %s", e)
+
+    async def close(self):
+        pass  # WebSocket connections are per-request, no persistent state to clean up

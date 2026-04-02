@@ -72,7 +72,7 @@ class MusicCog(commands.Cog):
         return voice_cog is not None and voice_cog.is_listening
 
     async def _search_youtube(self, query: str) -> dict | None:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             import yt_dlp
             ydl_opts = {

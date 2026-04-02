@@ -85,6 +85,7 @@ class VoiceCog(commands.Cog):
         self._response_task: asyncio.Task | None = None
         self._pending_actions: list = []
         self._current_personality = "default"
+        self._current_guild: discord.Guild | None = None
 
         vc = bot.config["voice"]
         lc = bot.config["llm"]
@@ -365,7 +366,11 @@ class VoiceCog(commands.Cog):
             self._is_responding = False
 
         # Wait for TTS playback to drain, then execute pending music actions
-        while voice_client.is_playing():
+        drain_deadline = asyncio.get_event_loop().time() + 30.0
+        while voice_client.is_connected() and voice_client.is_playing():
+            if asyncio.get_event_loop().time() > drain_deadline:
+                log.warning("TTS drain timeout, proceeding with pending actions")
+                break
             await asyncio.sleep(0.05)
 
         for action in self._pending_actions:
@@ -383,6 +388,7 @@ class VoiceCog(commands.Cog):
             self._response_task.cancel()
         await self._asr.close()
         await self._llm.close()
+        await self._tts.close()
 
 
 class AudioSink:

@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from dataclasses import dataclass, field
 
 import httpx
@@ -106,7 +107,7 @@ class LLMClient:
             for tc in msg.get("tool_calls", []):
                 func = tc.get("function", {})
                 tool_calls.append({
-                    "id": f"call_{hash(func.get('name', ''))}",
+                    "id": f"call_{uuid.uuid4().hex[:8]}",
                     "type": "function",
                     "function": {
                         "name": func.get("name", ""),

@@ -99,11 +99,11 @@ class ServiceManager:
                 log.info("Stopping service %s (pid %d)", name, proc.pid)
                 proc.terminate()
                 try:
-                    proc.wait(timeout=10)
+                    await asyncio.to_thread(proc.wait, timeout=10)
                 except subprocess.TimeoutExpired:
                     log.warning("Service %s did not stop, killing", name)
                     proc.kill()
-                    proc.wait()
+                    await asyncio.to_thread(proc.wait)
                 log.info("Service %s stopped", name)
 
         self._processes.clear()
