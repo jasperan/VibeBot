@@ -1,6 +1,29 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-import subprocess
+
+
+class FakeProcess:
+    def __init__(self, *, pid: int = 12345, exit_on_terminate: bool = True,
+                 exit_on_kill: bool = True):
+        self.pid = pid
+        self.returncode = None
+        self.terminate_calls = 0
+        self.kill_calls = 0
+        self._exit_on_terminate = exit_on_terminate
+        self._exit_on_kill = exit_on_kill
+
+    def poll(self):
+        return self.returncode
+
+    def terminate(self):
+        self.terminate_calls += 1
+        if self._exit_on_terminate:
+            self.returncode = 0
+
+    def kill(self):
+        self.kill_calls += 1
+        if self._exit_on_kill:
+            self.returncode = -9
 
 
 def test_service_manager_initial_state():
@@ -62,17 +85,16 @@ async def test_service_manager_shutdown():
     from src.service_manager import ServiceManager
 
     mgr = ServiceManager({"services": {}})
-    mock_proc = MagicMock()
-    mock_proc.poll.return_value = None
-    mock_proc.pid = 12345
-    mgr._processes["llm"] = mock_proc
+    proc = FakeProcess()
+    mgr._processes["llm"] = proc
     mgr._running = True
 
     await mgr.shutdown()
 
     assert mgr.is_running is False
     assert len(mgr._processes) == 0
-    mock_proc.terminate.assert_called_once()
+    assert proc.terminate_calls == 1
+    assert proc.kill_calls == 0
 
 
 @pytest.mark.asyncio
@@ -80,14 +102,13 @@ async def test_service_manager_shutdown_kills_on_timeout():
     from src.service_manager import ServiceManager
 
     mgr = ServiceManager({"services": {}})
-    mock_proc = MagicMock()
-    mock_proc.poll.return_value = None
-    mock_proc.pid = 12345
-    mock_proc.wait.side_effect = [subprocess.TimeoutExpired("cmd", 10), None]
-    mgr._processes["llm"] = mock_proc
+    proc = FakeProcess(exit_on_terminate=False, exit_on_kill=True)
+    mgr._processes["llm"] = proc
     mgr._running = True
 
-    await mgr.shutdown()
+    with patch("src.service_manager.SHUTDOWN_TIMEOUT_SECONDS", 0.01), \
+         patch("src.service_manager.SHUTDOWN_POLL_INTERVAL_SECONDS", 0.001):
+        await mgr.shutdown()
 
-    mock_proc.terminate.assert_called_once()
-    mock_proc.kill.assert_called_once()
+    assert proc.terminate_calls == 1
+    assert proc.kill_calls == 1

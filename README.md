@@ -98,7 +98,7 @@ python -m src.bot
 ## Tests
 
 ```bash
-pytest tests/ -v
+python -m pytest tests/ -v
 ```
 
 `tests/test_e2e_real.py` is a real-service validation module. To run it fully, you need:

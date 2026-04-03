@@ -4,6 +4,7 @@ Tests every component of VibeBot as a user would experience it.
 Requires: Ollama running with qwen3.5:9b at localhost:11434
 """
 import asyncio
+import errno
 import json
 import os
 import socket
@@ -46,6 +47,18 @@ def _require_dns(hostname: str):
         socket.getaddrinfo(hostname, 443)
     except OSError as exc:
         pytest.skip(f"DNS/network unavailable for {hostname}: {exc}")
+
+
+def _require_loopback_tcp():
+    try:
+        with socket.create_connection(("127.0.0.1", 1), timeout=1):
+            return
+    except PermissionError as exc:
+        pytest.skip(f"Loopback TCP is unavailable in this environment: {exc}")
+    except OSError as exc:
+        if exc.errno == errno.ECONNREFUSED:
+            return
+        pytest.skip(f"Loopback TCP is unavailable in this environment: {exc}")
 
 def test_config_yaml_exists_and_loads():
     assert os.path.exists("config.yaml"), "config.yaml missing. Run: cp config.example.yaml config.yaml"
@@ -353,6 +366,8 @@ async def test_pipeline_real_summarize():
 async def test_service_manager_real_process():
     """ServiceManager can start and stop a real subprocess."""
     from src.service_manager import ServiceManager
+
+    _require_loopback_tcp()
 
     config = {
         "services": {

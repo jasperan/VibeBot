@@ -7,6 +7,9 @@ import httpx
 
 log = logging.getLogger("vibebot.services")
 
+SHUTDOWN_TIMEOUT_SECONDS = 10
+SHUTDOWN_POLL_INTERVAL_SECONDS = 0.1
+
 
 class ServiceManager:
     """Manages external service subprocesses (ASR, TTS, LLM). Lazy-starts on demand."""
@@ -92,19 +95,35 @@ class ServiceManager:
 
         raise TimeoutError(f"Service {name} (WebSocket) did not become healthy within {timeout}s")
 
+    async def _wait_for_exit(self, proc: subprocess.Popen, timeout: float) -> bool:
+        """Poll for process exit without blocking the event loop."""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+
+        while loop.time() < deadline:
+            if proc.poll() is not None:
+                return True
+            remaining = deadline - loop.time()
+            await asyncio.sleep(min(SHUTDOWN_POLL_INTERVAL_SECONDS, max(0.0, remaining)))
+
+        return proc.poll() is not None
+
     async def shutdown(self) -> None:
         """Terminate all managed service processes."""
         for name, proc in self._processes.items():
             if proc.poll() is None:
                 log.info("Stopping service %s (pid %d)", name, proc.pid)
                 proc.terminate()
-                try:
-                    await asyncio.to_thread(proc.wait, timeout=10)
-                except subprocess.TimeoutExpired:
+                stopped = await self._wait_for_exit(proc, SHUTDOWN_TIMEOUT_SECONDS)
+                if not stopped:
                     log.warning("Service %s did not stop, killing", name)
                     proc.kill()
-                    await asyncio.to_thread(proc.wait)
-                log.info("Service %s stopped", name)
+                    stopped = await self._wait_for_exit(proc, SHUTDOWN_TIMEOUT_SECONDS)
+
+                if stopped:
+                    log.info("Service %s stopped", name)
+                else:
+                    log.warning("Service %s did not exit after kill", name)
 
         self._processes.clear()
         self._running = False

@@ -3,12 +3,16 @@ set -euo pipefail
 echo "Setting up VibeBot..."
 
 # Create conda env
-conda create -n vibebot python=3.12 -y
+if conda run -n vibebot python --version >/dev/null 2>&1; then
+    echo "Using existing conda env: vibebot"
+else
+    conda create -n vibebot python=3.12 -y
+fi
 eval "$(conda shell.bash hook)"
 conda activate vibebot
 
 # Install Python deps
-python -m pip install -r requirements.txt
+PIP_NO_CACHE_DIR=1 PYTHONNOUSERSITE=1 python -m pip install --no-user -r requirements.txt
 
 # Check FFmpeg
 if ! command -v ffmpeg &>/dev/null; then
