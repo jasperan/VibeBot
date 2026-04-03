@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 echo "Setting up VibeBot..."
 
 # Create conda env
@@ -8,7 +8,7 @@ eval "$(conda shell.bash hook)"
 conda activate vibebot
 
 # Install Python deps
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # Check FFmpeg
 if ! command -v ffmpeg &>/dev/null; then

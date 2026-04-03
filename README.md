@@ -73,7 +73,7 @@ cd VibeBot
 bash install.sh
 
 # Edit config
-vim config.yaml  # add your Discord token
+vim config.yaml  # add your real Discord bot token
 
 # Run
 conda activate vibebot
@@ -100,3 +100,12 @@ python -m src.bot
 ```bash
 pytest tests/ -v
 ```
+
+`tests/test_e2e_real.py` is a real-service validation module. To run it fully, you need:
+
+- a real Discord bot token in `config.yaml`
+- a reachable Ollama server with `qwen3.5:9b` at `http://localhost:11434`
+- network/DNS access for YouTube search tests
+- localhost access for service health checks
+
+When those prerequisites are missing, the real-service cases now skip explicitly instead of failing with opaque timeouts.

@@ -6,6 +6,7 @@ Requires: Ollama running with qwen3.5:9b at localhost:11434
 import asyncio
 import json
 import os
+import socket
 import sys
 import time
 
@@ -13,13 +14,43 @@ import numpy as np
 import pytest
 import yaml
 
+import httpx
+
 # ── 1. Config loading (as a user following README) ──────────────────
+
+PLACEHOLDER_DISCORD_TOKEN = "YOUR_DISCORD_BOT_TOKEN"
+
+
+def _load_runtime_config():
+    with open("config.yaml") as f:
+        return yaml.safe_load(f)
+
+
+def _require_real_discord_token(config):
+    token = config["discord"]["token"].strip()
+    if not token or token == PLACEHOLDER_DISCORD_TOKEN:
+        pytest.skip("config.yaml does not contain a real Discord token")
+
+
+def _require_http_service(name: str, url: str, timeout: float = 2.0):
+    try:
+        resp = httpx.get(url, timeout=timeout)
+    except Exception as exc:
+        pytest.skip(f"{name} is unavailable at {url}: {type(exc).__name__}: {exc}")
+    if resp.status_code != 200:
+        pytest.skip(f"{name} is unavailable at {url}: HTTP {resp.status_code}")
+
+
+def _require_dns(hostname: str):
+    try:
+        socket.getaddrinfo(hostname, 443)
+    except OSError as exc:
+        pytest.skip(f"DNS/network unavailable for {hostname}: {exc}")
 
 def test_config_yaml_exists_and_loads():
     assert os.path.exists("config.yaml"), "config.yaml missing. Run: cp config.example.yaml config.yaml"
-    with open("config.yaml") as f:
-        config = yaml.safe_load(f)
-    assert config["discord"]["token"], "Discord token not set"
+    config = _load_runtime_config()
+    _require_real_discord_token(config)
     assert config["voice"]["asr_url"]
     assert config["llm"]["base_url"]
     assert config["llm"]["model"]
@@ -133,6 +164,8 @@ async def test_llm_real_generation():
     """Hit the actual Ollama LLM and get a response."""
     from src.llm_client import LLMClient
 
+    _require_http_service("Ollama", "http://localhost:11434/api/tags")
+
     client = LLMClient(
         base_url="http://localhost:11434/v1",
         model="qwen3.5:9b",
@@ -157,6 +190,8 @@ async def test_llm_real_generation():
 async def test_llm_real_context_awareness():
     """LLM maintains conversation context correctly."""
     from src.llm_client import LLMClient
+
+    _require_http_service("Ollama", "http://localhost:11434/api/tags")
 
     client = LLMClient(
         base_url="http://localhost:11434/v1",
@@ -184,6 +219,8 @@ async def test_llm_real_tool_calling():
     """LLM can use tools to trigger music playback."""
     from src.llm_client import LLMClient
     from src.cogs.voice import MUSIC_TOOLS
+
+    _require_http_service("Ollama", "http://localhost:11434/api/tags")
 
     client = LLMClient(
         base_url="http://localhost:11434/v1",
@@ -225,6 +262,8 @@ async def test_pipeline_real_llm_mock_asr_tts():
     from unittest.mock import AsyncMock, MagicMock
     from src.voice_pipeline import VoicePipeline
     from src.llm_client import LLMClient
+
+    _require_http_service("Ollama", "http://localhost:11434/api/tags")
 
     # Real LLM client
     llm = LLMClient(
@@ -277,6 +316,8 @@ async def test_pipeline_real_summarize():
     from src.voice_pipeline import VoicePipeline
     from src.llm_client import LLMClient
     from unittest.mock import AsyncMock, MagicMock
+
+    _require_http_service("Ollama", "http://localhost:11434/api/tags")
 
     llm = LLMClient(
         base_url="http://localhost:11434/v1",
@@ -341,9 +382,11 @@ async def test_service_manager_real_process():
 
 def test_bot_initializes_with_config():
     """VibeBotClient can be created with real config."""
-    from src.bot import VibeBotClient, load_config
+    from src.bot import VibeBotClient, load_config, validate_runtime_config
 
     config = load_config("config.yaml")
+    _require_real_discord_token(config)
+    validate_runtime_config(config)
     bot = VibeBotClient(config)
     assert bot.config == config
     assert bot.services is not None
@@ -357,6 +400,8 @@ async def test_personality_changes_llm_behavior():
     """Different personalities produce different response styles."""
     from src.llm_client import LLMClient
     from src.cogs.voice import PERSONALITY_PRESETS
+
+    _require_http_service("Ollama", "http://localhost:11434/api/tags")
 
     results = {}
     for name in ("default", "pirate", "zen"):
@@ -389,6 +434,8 @@ async def test_youtube_search_real():
     from unittest.mock import MagicMock
     from src.cogs.music import MusicCog
 
+    _require_dns("www.youtube.com")
+
     bot = MagicMock()
     bot.config = {"music": {"max_queue_size": 50, "default_volume": 0.5}}
     cog = MusicCog(bot)
@@ -407,12 +454,14 @@ async def test_youtube_search_real():
 def test_all_cogs_with_real_config():
     """All cogs instantiate with the actual config.yaml."""
     from unittest.mock import MagicMock
-    from src.bot import load_config
+    from src.bot import load_config, validate_runtime_config
     from src.cogs.voice import VoiceCog
     from src.cogs.music import MusicCog
     from src.cogs.admin import AdminCog
 
     config = load_config("config.yaml")
+    _require_real_discord_token(config)
+    validate_runtime_config(config)
     bot = MagicMock()
     bot.config = config
 

@@ -7,11 +7,20 @@ from discord.ext import commands
 import yaml
 
 log = logging.getLogger("vibebot")
+PLACEHOLDER_DISCORD_TOKEN = "YOUR_DISCORD_BOT_TOKEN"
 
 
 def load_config(path: str = "config.yaml") -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def validate_runtime_config(config: dict) -> None:
+    token = config.get("discord", {}).get("token", "").strip()
+    if not token or token == PLACEHOLDER_DISCORD_TOKEN:
+        raise ValueError(
+            "config.yaml has no real Discord bot token. Update discord.token before running VibeBot."
+        )
 
 
 class VibeBotClient(commands.Bot):
@@ -50,6 +59,7 @@ def main():
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
     config = load_config()
+    validate_runtime_config(config)
     bot = VibeBotClient(config)
     bot.run(config["discord"]["token"], log_handler=None)
 

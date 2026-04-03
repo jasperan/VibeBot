@@ -117,7 +117,7 @@ class LLMClient:
 
             return LLMResponse(text=text, tool_calls=tool_calls)
         except Exception as e:
-            log.warning("Ollama request failed: %s", e)
+            log.warning("Ollama request failed: %s: %s", type(e).__name__, e)
             return LLMResponse()
 
     async def close(self):
