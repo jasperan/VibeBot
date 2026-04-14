@@ -90,6 +90,30 @@ Discord audio (48kHz stereo)
 
 The `llm.backend` field controls LLM API format: `"openai"` (default, for vLLM) or `"ollama"` (native API with thinking disabled).
 
+**Ollama gotcha**: when `llm.backend = "ollama"`, ServiceManager does NOT manage the LLM process (no entry in `services.llm` is needed). Start Ollama separately before launching the bot: `ollama serve`.
+
+## External Dependencies
+
+**VibeVoice** (Microsoft) must be cloned and installed separately -- it is not on PyPI:
+```bash
+git clone https://github.com/microsoft/VibeVoice.git
+cd VibeVoice && pip install -e ".[streamingtts,vllm]"
+```
+Set the `cwd` in `config.yaml` `services.asr` / `services.tts` to point at this checkout.
+
+**FFmpeg** is required for music playback (yt-dlp streams through it). Install system-wide:
+```bash
+sudo apt install ffmpeg   # Debian/Ubuntu
+```
+`install.sh` warns if it's missing but does not abort.
+
+## Gotchas
+
+- **Voice and music are mutually exclusive.** Stop one before starting the other. `/listen` will conflict with active music playback and vice versa.
+- **GPU required for ASR and TTS.** VibeVoice models run on CUDA. The bot itself is CPU-only.
+- **ServiceManager startup is sequential.** ASR then TTS then LLM (if managed), each polled until healthy. Startup timeout defaults to 120s per service -- increase in config if models are slow to load.
+- `webrtcvad-wheels` (not `webrtcvad`) is the required package; the plain `webrtcvad` wheel breaks on Python 3.12.
+
 ## Audio Format Constants
 
 - Discord captures/plays: 48kHz, stereo, 16-bit PCM (3840 bytes per 20ms frame)
