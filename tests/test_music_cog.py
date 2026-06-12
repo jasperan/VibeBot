@@ -41,6 +41,7 @@ def test_set_volume():
     from src.cogs.music import MusicCog
     bot = MagicMock()
     bot.config = {"music": {"max_queue_size": 50, "default_volume": 0.5}}
+    bot.voice_clients = []
     cog = MusicCog(bot)
 
     cog.set_volume(0.8)
@@ -52,6 +53,22 @@ def test_set_volume():
 
     cog.set_volume(-0.3)
     assert cog._volume == 0.0
+
+
+def test_set_volume_applies_to_live_source():
+    import discord
+    from src.cogs.music import MusicCog
+    bot = MagicMock()
+    bot.config = {"music": {"max_queue_size": 50, "default_volume": 0.5}}
+    cog = MusicCog(bot)
+
+    source = MagicMock(spec=discord.PCMVolumeTransformer)
+    vc = MagicMock()
+    vc.source = source
+    bot.voice_clients = [vc]
+
+    cog.set_volume(0.3)
+    assert source.volume == 0.3
 
 
 @pytest.mark.asyncio

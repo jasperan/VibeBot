@@ -61,7 +61,7 @@ async def test_check_health_http_success():
     cog = AdminCog(bot)
 
     mock_resp = httpx.Response(200)
-    with patch("src.cogs.admin.httpx.AsyncClient") as mock_client_cls:
+    with patch("src.service_manager.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.get.return_value = mock_resp
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -79,7 +79,7 @@ async def test_check_health_http_failure():
     bot = _make_bot()
     cog = AdminCog(bot)
 
-    with patch("src.cogs.admin.httpx.AsyncClient") as mock_client_cls:
+    with patch("src.service_manager.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.get.side_effect = Exception("Connection refused")
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)

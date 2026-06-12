@@ -29,6 +29,10 @@ class LLMClient:
     def __init__(self, base_url: str, model: str, max_tokens: int,
                  system_prompt: str, backend: str = "openai"):
         self.base_url = base_url.rstrip("/")
+        # Native Ollama API base (drop the OpenAI-compat /v1 suffix once).
+        self._ollama_base = (
+            self.base_url[:-3] if self.base_url.endswith("/v1") else self.base_url
+        )
         self.model = model
         self.max_tokens = max_tokens
         self.system_prompt = system_prompt
@@ -77,10 +81,7 @@ class LLMClient:
     async def _generate_ollama(self, messages: list[dict],
                                tools: list[dict] | None) -> LLMResponse:
         """Ollama native API with thinking disabled for low-latency voice."""
-        # Strip /v1 suffix if present to get native API base
-        base = self.base_url
-        if base.endswith("/v1"):
-            base = base[:-3]
+        base = self._ollama_base
 
         payload = {
             "model": self.model,

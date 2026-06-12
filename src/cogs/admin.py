@@ -4,7 +4,8 @@ import time
 import discord
 from discord import app_commands
 from discord.ext import commands
-import httpx
+
+from src.service_manager import probe_health
 
 log = logging.getLogger("vibebot.admin")
 
@@ -50,7 +51,7 @@ class AdminCog(commands.Cog):
             if healthy:
                 status_text += f" ({latency_ms}ms)"
 
-            proc = self.bot.services._processes.get(name)
+            proc = self.bot.services.process_status(name)
             if proc and proc.poll() is None:
                 status_text += f" [PID {proc.pid}]"
             elif proc:
@@ -61,17 +62,4 @@ class AdminCog(commands.Cog):
         await interaction.followup.send("\n".join(lines))
 
     async def _check_health(self, url: str) -> bool:
-        if url.startswith("ws://") or url.startswith("wss://"):
-            try:
-                import websockets
-                async with websockets.connect(url, close_timeout=2) as ws:
-                    return True
-            except Exception:
-                return False
-        else:
-            try:
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    resp = await client.get(url)
-                    return resp.status_code == 200
-            except Exception:
-                return False
+        return await probe_health(url)

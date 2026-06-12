@@ -70,14 +70,13 @@ vllm serve Qwen/Qwen3.5-9B --port 8010
 
 # Install VibeBot
 cd VibeBot
-bash install.sh
+bash install.sh   # runs `uv sync` and copies the config template
 
 # Edit config
 vim config.yaml  # add your real Discord bot token
 
 # Run
-conda activate vibebot
-python -m src.bot
+uv run python -m src.bot
 ```
 
 ## Commands
@@ -87,6 +86,8 @@ python -m src.bot
 | `/join` | Join your voice channel |
 | `/leave` | Leave and clear all state |
 | `/listen` | Toggle voice conversation mode |
+| `/recap` | Summarize the conversation so far |
+| `/personality` | Switch bot personality (default, pirate, shakespeare, sarcastic, zen, hype) |
 | `/play <query>` | Play a song from YouTube |
 | `/skip` | Skip current song |
 | `/queue` | Show the queue |
@@ -94,11 +95,13 @@ python -m src.bot
 | `/resume` | Resume playback |
 | `/stop` | Stop music, clear queue |
 | `/np` | Show now playing |
+| `/volume <0-100>` | Set music volume |
+| `/status` | Service health with latency |
 
 ## Tests
 
 ```bash
-python -m pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 `tests/test_e2e_real.py` is a real-service validation module. To run it fully, you need:

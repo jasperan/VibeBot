@@ -2,17 +2,12 @@
 set -euo pipefail
 echo "Setting up VibeBot..."
 
-# Create conda env
-if conda run -n vibebot python --version >/dev/null 2>&1; then
-    echo "Using existing conda env: vibebot"
-else
-    conda create -n vibebot python=3.12 -y
+# Install Python deps with uv (creates .venv from pyproject.toml + uv.lock)
+if ! command -v uv &>/dev/null; then
+    echo "ERROR: uv not found. Install it from https://docs.astral.sh/uv/"
+    exit 1
 fi
-eval "$(conda shell.bash hook)"
-conda activate vibebot
-
-# Install Python deps
-PIP_NO_CACHE_DIR=1 PYTHONNOUSERSITE=1 python -m pip install --no-user -r requirements.txt
+uv sync
 
 # Check FFmpeg
 if ! command -v ffmpeg &>/dev/null; then
@@ -26,5 +21,5 @@ if [ ! -f config.yaml ]; then
     echo "Created config.yaml from template. Edit it with your Discord token."
 fi
 
-echo "Done. Activate with: conda activate vibebot"
-echo "Run with: python -m src.bot"
+echo "Done."
+echo "Run with: uv run python -m src.bot"

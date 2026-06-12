@@ -24,14 +24,37 @@ class MusicCog(commands.Cog):
         self.is_playing = False
         self.now_playing: dict | None = None
 
-    def _clear_state(self):
+    def reset(self):
+        """Clear the queue and playback state. Public cross-cog API."""
         self.queue.clear()
         self.is_playing = False
         self.now_playing = None
 
+    # Backwards-compatible alias
+    _clear_state = reset
+
     def set_volume(self, level: float):
         """Set volume level (0.0 to 1.0). Applies immediately if playing."""
         self._volume = max(0.0, min(1.0, level))
+        self._apply_live_volume()
+
+    def _apply_live_volume(self):
+        """Push the current volume onto the active audio source, if any."""
+        for vc in self.bot.voice_clients:
+            source = getattr(vc, "source", None)
+            if isinstance(source, discord.PCMVolumeTransformer):
+                source.volume = self._volume
+
+    def _start_track(self, guild: discord.Guild, track: dict):
+        """Start playing a track in the guild's voice client (assumes idle)."""
+        self.is_playing = True
+        self.now_playing = track
+        vc = guild.voice_client
+        if not vc:
+            return
+        source = discord.FFmpegPCMAudio(track["url"], **FFMPEG_OPTIONS)
+        source = discord.PCMVolumeTransformer(source, volume=self._volume)
+        vc.play(source, after=lambda e: self._play_next(guild, e))
 
     async def voice_play(self, guild: discord.Guild, query: str):
         """Play a track triggered by voice command (no interaction needed)."""
@@ -47,11 +70,7 @@ class MusicCog(commands.Cog):
             self.queue.append(track)
             log.info("Voice play: queued '%s'", track["title"])
         else:
-            self.is_playing = True
-            self.now_playing = track
-            source = discord.FFmpegPCMAudio(track["url"], **FFMPEG_OPTIONS)
-            source = discord.PCMVolumeTransformer(source, volume=self._volume)
-            vc.play(source, after=lambda e: self._play_next(guild, e))
+            self._start_track(guild, track)
             log.info("Voice play: now playing '%s'", track["title"])
 
     async def voice_skip(self, guild: discord.Guild):
@@ -65,7 +84,7 @@ class MusicCog(commands.Cog):
         vc = guild.voice_client
         if vc and (vc.is_playing() or vc.is_paused()):
             vc.stop()
-        self._clear_state()
+        self.reset()
 
     def _check_listening(self) -> bool:
         voice_cog = self.bot.get_cog("VoiceCog")
@@ -104,12 +123,7 @@ class MusicCog(commands.Cog):
             log.warning("Player error: %s", error)
         if self.queue:
             track = self.queue.popleft()
-            self.now_playing = track
-            vc = guild.voice_client
-            if vc:
-                source = discord.FFmpegPCMAudio(track["url"], **FFMPEG_OPTIONS)
-                source = discord.PCMVolumeTransformer(source, volume=self._volume)
-                vc.play(source, after=lambda e: self._play_next(guild, e))
+            self._start_track(guild, track)
         else:
             self.is_playing = False
             self.now_playing = None
@@ -143,11 +157,7 @@ class MusicCog(commands.Cog):
                 f"Queued: **{track['title']}** (#{len(self.queue)} in queue)"
             )
         else:
-            self.is_playing = True
-            self.now_playing = track
-            source = discord.FFmpegPCMAudio(track["url"], **FFMPEG_OPTIONS)
-            source = discord.PCMVolumeTransformer(source, volume=self._volume)
-            vc.play(source, after=lambda e: self._play_next(interaction.guild, e))
+            self._start_track(interaction.guild, track)
             await interaction.followup.send(f"Now playing: **{track['title']}**")
 
     @app_commands.command(name="skip", description="Skip the current song")
@@ -194,7 +204,7 @@ class MusicCog(commands.Cog):
         vc = interaction.guild.voice_client
         if vc and (vc.is_playing() or vc.is_paused()):
             vc.stop()
-        self._clear_state()
+        self.reset()
         await interaction.response.send_message("Stopped and cleared queue.", ephemeral=True)
 
     @app_commands.command(name="np", description="Show now playing")
@@ -219,10 +229,7 @@ class MusicCog(commands.Cog):
                 "Volume must be between 0 and 100.", ephemeral=True
             )
             return
-        self._volume = level / 100.0
-        vc = interaction.guild.voice_client
-        if vc and vc.source and isinstance(vc.source, discord.PCMVolumeTransformer):
-            vc.source.volume = self._volume
+        self.set_volume(level / 100.0)
         await interaction.response.send_message(
             f"Volume set to {level}%", ephemeral=True
         )

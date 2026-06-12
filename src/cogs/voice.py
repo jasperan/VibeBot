@@ -152,7 +152,7 @@ class VoiceCog(commands.Cog):
         self._pipeline.clear_context()
         music_cog = self.bot.get_cog("MusicCog")
         if music_cog:
-            music_cog._clear_state()
+            music_cog.reset()
         await vc.disconnect()
         if self.bot.services.is_running:
             await self.bot.services.shutdown()
@@ -222,12 +222,7 @@ class VoiceCog(commands.Cog):
         app_commands.Choice(name=k, value=k) for k in PERSONALITY_PRESETS
     ])
     async def personality(self, interaction: discord.Interaction, preset: str):
-        if preset not in PERSONALITY_PRESETS:
-            names = ", ".join(PERSONALITY_PRESETS.keys())
-            await interaction.response.send_message(
-                f"Unknown preset. Available: {names}", ephemeral=True
-            )
-            return
+        # @app_commands.choices restricts `preset` to PERSONALITY_PRESETS keys.
         self._current_personality = preset
         self._llm.system_prompt = PERSONALITY_PRESETS[preset]
         await interaction.response.send_message(
@@ -278,15 +273,10 @@ class VoiceCog(commands.Cog):
         silence_limit = int(self._silence_threshold_ms / VAD_FRAME_MS)
         is_speaking = False
 
+        sink = AudioSink()
+        voice_client.listen(sink)
         try:
             while self.is_listening and voice_client.is_connected():
-                if not hasattr(voice_client, "_vibebot_sink"):
-                    sink = AudioSink()
-                    voice_client._vibebot_sink = sink
-                    voice_client.listen(sink)
-
-                sink = voice_client._vibebot_sink
-
                 while len(sink.buffer) >= VAD_FRAME_BYTES:
                     frame = bytes(sink.buffer[:VAD_FRAME_BYTES])
                     del sink.buffer[:VAD_FRAME_BYTES]
@@ -329,9 +319,7 @@ class VoiceCog(commands.Cog):
         except Exception as e:
             log.error("Listen loop error: %s", e, exc_info=True)
         finally:
-            if hasattr(voice_client, "_vibebot_sink"):
-                voice_client.stop_listening()
-                del voice_client._vibebot_sink
+            voice_client.stop_listening()
 
     def _dispatch_utterance(self, pcm: bytes, voice_client: discord.VoiceClient):
         """Fire-and-forget utterance processing (enables barge-in)."""
@@ -366,12 +354,10 @@ class VoiceCog(commands.Cog):
             self._is_responding = False
 
         # Wait for TTS playback to drain, then execute pending music actions
-        drain_deadline = asyncio.get_event_loop().time() + 30.0
-        while voice_client.is_connected() and voice_client.is_playing():
-            if asyncio.get_event_loop().time() > drain_deadline:
-                log.warning("TTS drain timeout, proceeding with pending actions")
-                break
-            await asyncio.sleep(0.05)
+        try:
+            await asyncio.wait_for(self._wait_until_drained(voice_client), timeout=30.0)
+        except asyncio.TimeoutError:
+            log.warning("TTS drain timeout, proceeding with pending actions")
 
         for action in self._pending_actions:
             try:
@@ -379,6 +365,12 @@ class VoiceCog(commands.Cog):
             except Exception as e:
                 log.warning("Pending action failed: %s", e)
         self._pending_actions = []
+
+    @staticmethod
+    async def _wait_until_drained(voice_client: discord.VoiceClient):
+        """Block until the voice client stops playing (or disconnects)."""
+        while voice_client.is_connected() and voice_client.is_playing():
+            await asyncio.sleep(0.05)
 
     async def cog_unload(self):
         self.is_listening = False

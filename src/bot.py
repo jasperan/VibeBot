@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import sys
 
@@ -30,7 +29,6 @@ class VibeBotClient(commands.Bot):
         intents.voice_states = True
         super().__init__(command_prefix="!", intents=intents)
         self.config = config
-        self.mode_lock = asyncio.Lock()
 
         from src.service_manager import ServiceManager
         self.services = ServiceManager(config)

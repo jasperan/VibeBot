@@ -11,6 +11,23 @@ SHUTDOWN_TIMEOUT_SECONDS = 10
 SHUTDOWN_POLL_INTERVAL_SECONDS = 0.1
 
 
+async def probe_health(url: str) -> bool:
+    """Return True if the service at `url` responds. Supports http(s) and ws(s)."""
+    if url.startswith("ws://") or url.startswith("wss://"):
+        try:
+            import websockets
+            async with websockets.connect(url, close_timeout=2):
+                return True
+        except Exception:
+            return False
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
+            return resp.status_code == 200
+    except Exception:
+        return False
+
+
 class ServiceManager:
     """Manages external service subprocesses (ASR, TTS, LLM). Lazy-starts on demand."""
 
@@ -22,6 +39,10 @@ class ServiceManager:
     @property
     def is_running(self) -> bool:
         return self._running
+
+    def process_status(self, name: str) -> subprocess.Popen | None:
+        """Return the managed process for `name`, or None if not started."""
+        return self._processes.get(name)
 
     async def ensure_running(self) -> None:
         """Start all services if not already running. Blocks until healthy."""
@@ -56,44 +77,17 @@ class ServiceManager:
         log.info("All services ready")
 
     async def _wait_for_health(self, name: str, url: str, timeout: int) -> None:
-        """Poll a health endpoint until it responds or timeout."""
-        if url.startswith("ws://") or url.startswith("wss://"):
-            await self._wait_for_ws_health(name, url, timeout)
-            return
-
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            elapsed = 0
-            interval = 2
-            while elapsed < timeout:
-                try:
-                    resp = await client.get(url)
-                    if resp.status_code == 200:
-                        log.info("Service %s is healthy", name)
-                        return
-                except Exception:
-                    pass
-                await asyncio.sleep(interval)
-                elapsed += interval
-
-        raise TimeoutError(f"Service {name} did not become healthy within {timeout}s")
-
-    async def _wait_for_ws_health(self, name: str, url: str, timeout: int) -> None:
-        """Probe a WebSocket endpoint until it accepts connections."""
-        import websockets
-
+        """Poll a health endpoint (http or ws) until it responds or timeout."""
         elapsed = 0
         interval = 2
         while elapsed < timeout:
-            try:
-                async with websockets.connect(url, close_timeout=2) as ws:
-                    log.info("Service %s is healthy (WebSocket)", name)
-                    return
-            except Exception:
-                pass
+            if await probe_health(url):
+                log.info("Service %s is healthy", name)
+                return
             await asyncio.sleep(interval)
             elapsed += interval
 
-        raise TimeoutError(f"Service {name} (WebSocket) did not become healthy within {timeout}s")
+        raise TimeoutError(f"Service {name} did not become healthy within {timeout}s")
 
     async def _wait_for_exit(self, proc: subprocess.Popen, timeout: float) -> bool:
         """Poll for process exit without blocking the event loop."""
