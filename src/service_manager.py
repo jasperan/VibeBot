@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import signal
 import subprocess
 
@@ -61,7 +62,7 @@ class ServiceManager:
                 cwd=svc.get("cwd"),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN),
+                start_new_session=True,
             )
             self._processes[name] = proc
             log.info("Service %s started (pid %d)", name, proc.pid)
@@ -102,22 +103,45 @@ class ServiceManager:
 
         return proc.poll() is not None
 
-    async def shutdown(self) -> None:
-        """Terminate all managed service processes."""
-        for name, proc in self._processes.items():
-            if proc.poll() is None:
-                log.info("Stopping service %s (pid %d)", name, proc.pid)
-                proc.terminate()
-                stopped = await self._wait_for_exit(proc, SHUTDOWN_TIMEOUT_SECONDS)
-                if not stopped:
-                    log.warning("Service %s did not stop, killing", name)
-                    proc.kill()
-                    stopped = await self._wait_for_exit(proc, SHUTDOWN_TIMEOUT_SECONDS)
+    @staticmethod
+    def _signal_group(proc: subprocess.Popen, sig: int) -> None:
+        """Signal the service's whole process group (shell wrapper + real server)."""
+        try:
+            os.killpg(proc.pid, sig)
+        except ProcessLookupError:
+            pass
 
-                if stopped:
-                    log.info("Service %s stopped", name)
-                else:
-                    log.warning("Service %s did not exit after kill", name)
+    async def _wait_for_group_exit(self, proc: subprocess.Popen, timeout: float) -> bool:
+        """Poll until no process remains in the service's process group."""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+
+        while True:
+            proc.poll()  # reap the wrapper so it doesn't linger as a zombie group member
+            try:
+                os.killpg(proc.pid, 0)
+            except ProcessLookupError:
+                return True
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return False
+            await asyncio.sleep(min(SHUTDOWN_POLL_INTERVAL_SECONDS, remaining))
+
+    async def shutdown(self) -> None:
+        """Terminate all managed service processes, including children of the shell wrapper."""
+        for name, proc in self._processes.items():
+            log.info("Stopping service %s (pid %d)", name, proc.pid)
+            self._signal_group(proc, signal.SIGTERM)
+            stopped = await self._wait_for_group_exit(proc, SHUTDOWN_TIMEOUT_SECONDS)
+            if not stopped:
+                log.warning("Service %s did not stop, killing", name)
+                self._signal_group(proc, signal.SIGKILL)
+                stopped = await self._wait_for_group_exit(proc, SHUTDOWN_TIMEOUT_SECONDS)
+
+            if stopped:
+                log.info("Service %s stopped", name)
+            else:
+                log.warning("Service %s did not exit after kill", name)
 
         self._processes.clear()
         self._running = False
