@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import re
 from collections import deque
+from urllib.parse import urlsplit
 
 import discord
 from discord import app_commands
@@ -12,6 +14,28 @@ FFMPEG_OPTIONS = {
     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     "options": "-vn",
 }
+
+ALLOWED_URL_HOSTS = frozenset(
+    {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"}
+)
+_URL_SCHEME_RE = re.compile(r"^\s*(?:[a-zA-Z][a-zA-Z0-9+.-]*:)?//")
+
+
+def _as_search_query(query: str) -> str:
+    """Return what yt-dlp may resolve for a user/LLM-supplied query.
+
+    Anything shaped like a URL must be http(s) on an allowlisted YouTube host
+    (so callers cannot make the bot fetch loopback/LAN/arbitrary hosts);
+    everything else is a plain search phrase.
+    """
+    if _URL_SCHEME_RE.match(query):
+        parts = urlsplit(query.strip())
+        if parts.scheme not in ("http", "https"):
+            raise ValueError("unsupported URL scheme")
+        if (parts.hostname or "").lower() not in ALLOWED_URL_HOSTS:
+            raise ValueError("only YouTube URLs are accepted")
+        return query.strip()
+    return f"ytsearch1:{query}"
 
 
 class MusicCog(commands.Cog):
@@ -102,6 +126,7 @@ class MusicCog(commands.Cog):
                 "default_search": "ytsearch",
                 "extract_flat": False,
             }
+            query = _as_search_query(query)
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = await loop.run_in_executor(
                     None, lambda: ydl.extract_info(query, download=False)

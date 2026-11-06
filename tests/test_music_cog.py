@@ -165,3 +165,37 @@ async def test_voice_play_no_results():
 
     assert len(cog.queue) == 0
     assert cog.is_playing is False
+
+
+@pytest.mark.parametrize("url", [
+    "http://127.0.0.1:8000/v1/models",
+    "https://169.254.169.254/latest/meta-data/",
+    "file:///etc/hostname",
+    "ftp://example.com/x",
+    "//evil.example/x",
+    "http://youtube.com@evil.example/x",
+    "https://youtube.com.evil.example/watch?v=x",
+])
+def test_as_search_query_rejects_non_youtube_urls(url):
+    from src.cogs.music import _as_search_query
+    with pytest.raises(ValueError):
+        _as_search_query(url)
+
+
+def test_as_search_query_allows_youtube_urls_and_wraps_search_phrases():
+    from src.cogs.music import _as_search_query
+    assert _as_search_query("https://www.youtube.com/watch?v=abc") == "https://www.youtube.com/watch?v=abc"
+    assert _as_search_query("https://youtu.be/abc") == "https://youtu.be/abc"
+    assert _as_search_query("Re: something good") == "ytsearch1:Re: something good"
+    assert _as_search_query("127.0.0.1:8000/x") == "ytsearch1:127.0.0.1:8000/x"
+
+
+@pytest.mark.asyncio
+async def test_search_youtube_does_not_resolve_loopback_url():
+    from src.cogs.music import MusicCog
+    bot = MagicMock()
+    bot.config = {"music": {"max_queue_size": 50, "default_volume": 0.5}}
+    cog = MusicCog(bot)
+    with patch("yt_dlp.YoutubeDL") as ydl:
+        assert await cog._search_youtube("http://127.0.0.1:8000/v1/models") is None
+    ydl.assert_not_called()
